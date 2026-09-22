@@ -1,0 +1,13 @@
+{
+  "name": "cimd-flow-test",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "test": "node run-flow-test.mjs"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "oidc-provider": "9.12.2"
+  }
+}

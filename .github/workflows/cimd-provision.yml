@@ -1,0 +1,96 @@
+name: Provision CIMD client (pilot)
+
+# Pilot GitHub-only CIMD-as-a-service: turns a validated GitHub Issue into a
+# published Client ID Metadata Document under this repo's Pages site.
+#
+# Deliberately restricted for the pilot:
+#   - Only issues opened by an allow-listed actor are provisioned (see
+#     ALLOWLIST below). This is a safety limit for the proof, not a
+#     statement that non-collaborators can't be supported later.
+#   - Only http://127.0.0.1 | http://localhost | http://[::1] redirect URIs
+#     are accepted (loopback native-app clients only).
+#   - No PR review step: publishing goes straight to main so Pages serves it
+#     immediately, matching the "no PR-only publication" requirement.
+#   - Least privilege: contents:write (to commit the doc) and
+#     issues:write (to reply/close) only. No pull_request_target, no
+#     checkout of untrusted refs, no execution of issue-body content as
+#     code — the body is only ever parsed as inert text by provision.js.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  # Issue numbers are unique/monotonic, so per-issue concurrency avoids any
+  # write race between two requests landing on main at once.
+  group: cimd-provision-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'cimd-request') &&
+      contains(fromJson('["SamMorrowDrums"]'), github.event.issue.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Validate input and write metadata document
+        id: provision
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_ACTOR: ${{ github.event.issue.user.login }}
+        run: node scripts/provision.js
+
+      - name: Commit and push
+        env:
+          FILE_PATH: ${{ steps.provision.outputs.file_path }}
+        run: |
+          set -euo pipefail
+          git config user.name "cimd-provisioner[bot]"
+          git config user.email "cimd-provisioner@users.noreply.github.com"
+          git add -- "$FILE_PATH"
+          git commit -m "cimd: provision client for issue #${{ github.event.issue.number }}"
+          git push origin HEAD:main
+
+      - name: Reply and close issue
+        uses: actions/github-script@v7
+        env:
+          CLIENT_ID: ${{ steps.provision.outputs.client_id }}
+          APP_NAME: ${{ steps.provision.outputs.app_name }}
+          REDIRECT_URI: ${{ steps.provision.outputs.redirect_uri }}
+        with:
+          script: |
+            const clientId = process.env.CLIENT_ID;
+            const appName = process.env.APP_NAME;
+            const redirectUri = process.env.REDIRECT_URI;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                `Provisioned for **${appName}**.`,
+                "",
+                "```",
+                clientId,
+                "```",
+                "",
+                `Use this URL as your OAuth \`client_id\`. Registered redirect: \`${redirectUri}\`.`,
+                "",
+                "It may take a minute for GitHub Pages to serve the new file.",
+              ].join("\n"),
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed",
+            });
