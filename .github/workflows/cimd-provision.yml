@@ -25,9 +25,11 @@ permissions:
   issues: write
 
 concurrency:
-  # Issue numbers are unique/monotonic, so per-issue concurrency avoids any
-  # write race between two requests landing on main at once.
-  group: cimd-provision-${{ github.event.issue.number }}
+  # A single repo-wide group serializes concurrent provisioning runs so two
+  # issues opened close together can't both check out the same base commit
+  # and race to push main (observed and fixed during this pilot's own
+  # end-to-end test — see STEPS.md).
+  group: cimd-provision
   cancel-in-progress: false
 
 jobs:
@@ -59,7 +61,16 @@ jobs:
           git config user.email "cimd-provisioner@users.noreply.github.com"
           git add -- "$FILE_PATH"
           git commit -m "cimd: provision client for issue #${{ github.event.issue.number }}"
-          git push origin HEAD:main
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt), rebasing onto latest main and retrying"
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::failed to push after retries"
+          exit 1
 
       - name: Reply and close issue
         uses: actions/github-script@v7
