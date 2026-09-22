@@ -9,7 +9,7 @@ const CLIENT_ID_A = process.env.CLIENT_ID_A;
 const CLIENT_ID_B = process.env.CLIENT_ID_B;
 const MISMATCH_CLIENT_ID =
   process.env.MISMATCH_CLIENT_ID ||
-  "https://sammorrowdrums.github.io/cimd-pages-e2e/clients/_test-mismatch.json";
+  "https://sammorrowdrums.github.io/cimd-pages-e2e/clients/test-mismatch-fixture.json";
 
 if (!CLIENT_ID_A || !CLIENT_ID_B) {
   console.error("Set CLIENT_ID_A and CLIENT_ID_B to two distinct real published CIMD URLs.");

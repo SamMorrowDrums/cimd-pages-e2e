@@ -1,5 +1,5 @@
 {
-  "_note": "Deliberately-broken fixture for the flow-test negative case: this document's client_id field intentionally does NOT match the URL it is hosted/fetched at (https://sammorrowdrums.github.io/cimd-pages-e2e/clients/_test-mismatch.json). It is not produced by the provisioning workflow and is not a usable client.",
+  "_note": "Deliberately-broken fixture for the flow-test negative case: this document's client_id field intentionally does NOT match the URL it is hosted/fetched at (https://sammorrowdrums.github.io/cimd-pages-e2e/clients/test-mismatch-fixture.json). It is not produced by the provisioning workflow and is not a usable client.",
   "client_id": "https://sammorrowdrums.github.io/cimd-pages-e2e/clients/does-not-exist.json",
   "client_name": "Intentionally mismatched test fixture",
   "redirect_uris": ["http://127.0.0.1:9/callback"],
