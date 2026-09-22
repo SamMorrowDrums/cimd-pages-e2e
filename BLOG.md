@@ -36,6 +36,16 @@ cases (mismatched `client_id`, unregistered redirect, wrong PKCE
 verifier) to check the rejections actually happen. See `STEPS.md` in the
 repo for the real, timestamped run log.
 
+As a further, separate check, the same hosted `client.json` was used in a
+real interactive login against [Linear's](https://linear.app) live public
+MCP server (`mcp.linear.app`) — a real, independently-operated production
+authorization server, not a local test harness. A human logged into their
+own Linear account, saw a genuine consent screen naming this client and
+its redirect URI (proof Linear's AS actually fetched the hosted document),
+approved it, and the flow completed a real token exchange and an
+authenticated MCP call. One real external implementation, one real data
+point — not a claim that CIMD support is widespread yet.
+
 This doesn't prove who wrote the code calling itself that client — PKCE
 and CIMD don't do app attestation. What it does is make hosting *your
 own* loopback client identity cheap enough that there's no reason to keep

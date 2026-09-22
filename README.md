@@ -104,6 +104,21 @@ See [`flow-test/README.md`](./flow-test/README.md) to run it yourself, and
 [`STEPS.md`](./STEPS.md) for the actual timestamped log and output from the
 last real run.
 
+## Real third-party interop: `linear-interop-test/`
+
+[`linear-interop-test/`](./linear-interop-test) goes one step further:
+a real, **interactive** authorization code + PKCE flow against
+[Linear's](https://linear.app) live, independently-operated production MCP
+server (`https://mcp.linear.app`), using this repo's live `/client.json`
+as `client_id`. A human logs into their own Linear account and approves a
+real consent screen that shows this client's name and redirect URI —
+proof that Linear's production authorization server fetched and rendered
+the hosted CIMD document — followed by a real token exchange and an
+authenticated MCP `initialize` call. See its
+[README](./linear-interop-test/README.md) and the dated entry in
+[`STEPS.md`](./STEPS.md) for the exact evidence. This is one real,
+named interoperability result, not a claim about CIMD support generally.
+
 ## Limitations
 
 - `flow-test/`'s authorization server is a real library run locally for
@@ -111,6 +126,7 @@ last real run.
   **not** a claim of interoperability between two independently-operated
   production services. It shows one maintained implementation of the CIMD
   draft working against a real, live, publicly-hosted document.
+  `linear-interop-test/` is the separate, real external-AS proof.
 - CIMD only authenticates the **document's fetch URL**, not the app
   presenting it. Nothing here (PKCE included) proves who wrote the code
   running on your machine — it only reduces the incentive to reuse

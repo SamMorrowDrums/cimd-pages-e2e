@@ -112,3 +112,62 @@ testing the earlier provisioning-era mismatch fixture, which lived at
 build). Fix: an empty `.nojekyll` file at the repo root. Still present and
 still needed in this repo, independent of the provisioning-service
 removal.
+
+## 5. Real interactive interop test against a named third-party AS (Linear)
+
+Everything above uses a local `oidc-provider` instance driven
+non-interactively. This section is a separate, additional test against a
+**real, independently-operated, production authorization server**:
+Linear's public remote MCP server at `https://mcp.linear.app`.
+
+Discovery, fetched live on **2026-09-22** (not assumed):
+
+```
+GET https://mcp.linear.app/mcp
+→ 401, www-authenticate: Bearer resource_metadata="https://mcp.linear.app/.well-known/oauth-protected-resource/mcp"
+
+GET https://mcp.linear.app/.well-known/oauth-protected-resource/mcp
+→ authorization_servers: ["https://mcp.linear.app"]
+
+GET https://mcp.linear.app/.well-known/oauth-authorization-server
+→ authorization_endpoint=https://mcp.linear.app/authorize
+  token_endpoint=https://mcp.linear.app/token
+  client_id_metadata_document_supported=true
+  code_challenge_methods_supported=["S256"]
+```
+
+Real run (`linear-interop-test/run-linear-interop.mjs`), a genuine human
+approval required at step 3:
+
+1. Script confirmed the live `/client.json` self-matches and lists the
+   loopback redirect used (`http://127.0.0.1:8765/callback`).
+2. Started a loopback-only HTTP receiver on `127.0.0.1:8765`.
+3. Printed a real authorization URL (PKCE S256, random `state`,
+   `client_id` = this repo's Pages URL). A human opened it, logged into
+   their own Linear account, and **saw Linear's real consent screen
+   showing this client's name and exact redirect URI** — i.e. Linear's
+   production AS fetched and rendered the hosted CIMD document. They
+   clicked Approve.
+4. Real redirect landed on the loopback receiver:
+   `received authorization code (b896e7…redacted, len=86) with matching state`.
+5. Real token exchange: `token endpoint status=200`,
+   `access_token=b896e7…redacted, len=86 token_type=bearer scope=read`.
+6. Real authenticated MCP request: `initialize status=200`, body began
+   `{"result":{"protocolVersion":"2024-11-05", ...,
+   "serverInfo":{"name":"Linear MCP","version":"1.0.0", ...}}}`.
+
+One benign hiccup during the run: a manual `curl` diagnostic against the
+loopback port (checking it was listening) accidentally consumed the
+one-shot callback receiver with no `code`/`state`, correctly triggering
+the script's state-mismatch abort with **no token exchange attempted**
+(fail-safe behavior worked as intended). The transaction was restarted
+fresh (new PKCE pair, new state) and completed as recorded above without
+further interference.
+
+**Scope of this result**: one real, named, external authorization server
+(Linear, `mcp.linear.app`) performing a genuine CIMD fetch + full OAuth
+PKCE + MCP handshake against this repo's live hosted `client.json`. This
+is a real interoperability data point with one real implementation — not
+a claim that all/most authorization servers support CIMD, and not an
+endorsement of or affiliation with Linear. No tokens, codes, or secrets
+were committed to git or written to disk.
