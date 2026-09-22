@@ -24,7 +24,12 @@ export async function startAuthorizationServer({ port = 0 } = {}) {
         // URL it was fetched from; oidc-provider enforces this itself. We
         // additionally cap cache so repeated test runs re-fetch quickly.
         cacheMaxAge: 5,
+        ack: "draft-02",
       },
+      // oidc-provider ships a built-in demo login/consent UI; we replace it
+      // entirely with our own auto-approving handler below (test-only, no
+      // real user), so the built-in one must be turned off explicitly.
+      devInteractions: { enabled: false },
     },
     pkce: {
       // Explicit for clarity; this matches oidc-provider's own default for
