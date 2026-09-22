@@ -5,16 +5,12 @@ import crypto from "node:crypto";
 import { startAuthorizationServer } from "./server.mjs";
 import { startLoopbackCallback } from "./loopback.mjs";
 
-const CLIENT_ID_A = process.env.CLIENT_ID_A;
-const CLIENT_ID_B = process.env.CLIENT_ID_B;
+const CLIENT_ID =
+  process.env.CLIENT_ID ||
+  "https://sammorrowdrums.github.io/cimd-pages-e2e/client.json";
 const MISMATCH_CLIENT_ID =
   process.env.MISMATCH_CLIENT_ID ||
-  "https://sammorrowdrums.github.io/cimd-pages-e2e/clients/test-mismatch-fixture.json";
-
-if (!CLIENT_ID_A || !CLIENT_ID_B) {
-  console.error("Set CLIENT_ID_A and CLIENT_ID_B to two distinct real published CIMD URLs.");
-  process.exit(2);
-}
+  "https://sammorrowdrums.github.io/cimd-pages-e2e/test-fixtures/mismatch-client.json";
 
 const results = [];
 function record(name, pass, detail) {
@@ -80,22 +76,16 @@ async function runAuthorization({ authorizationEndpoint, params, loopbackPrefix 
 }
 
 async function main() {
-  console.log(`[${new Date().toISOString()}] fetching real hosted CIMD documents`);
-  const docA = await fetchDoc(CLIENT_ID_A);
-  const docB = await fetchDoc(CLIENT_ID_B);
+  console.log(`[${new Date().toISOString()}] fetching real hosted CIMD document: ${CLIENT_ID}`);
+  const doc = await fetchDoc(CLIENT_ID);
 
   record(
-    "CIMD fetch A: 200 + client_id self-match",
-    docA.status === 200 && docA.json?.client_id === CLIENT_ID_A,
-    `status=${docA.status} content-type=${docA.contentType}`,
-  );
-  record(
-    "CIMD fetch B: 200 + client_id self-match",
-    docB.status === 200 && docB.json?.client_id === CLIENT_ID_B,
-    `status=${docB.status} content-type=${docB.contentType}`,
+    "CIMD fetch: 200 + client_id self-match",
+    doc.status === 200 && doc.json?.client_id === CLIENT_ID,
+    `status=${doc.status} content-type=${doc.contentType}`,
   );
 
-  const redirectUriA = docA.json.redirect_uris[0];
+  const redirectUriA = doc.json.redirect_uris[0];
   const loopback = await startLoopbackCallback(new URL(redirectUriA).port);
 
   const as = await startAuthorizationServer();
@@ -110,7 +100,7 @@ async function main() {
       loopbackPrefix: redirectUriA,
       params: {
         response_type: "code",
-        client_id: CLIENT_ID_A,
+        client_id: CLIENT_ID,
         redirect_uri: redirectUriA,
         scope: "openid",
         state: state1,
@@ -139,7 +129,7 @@ async function main() {
           grant_type: "authorization_code",
           code: positiveCode,
           redirect_uri: redirectUriA,
-          client_id: CLIENT_ID_A,
+          client_id: CLIENT_ID,
           code_verifier: pkce1.verifier,
         }),
       });
@@ -199,7 +189,7 @@ async function main() {
       loopbackPrefix: wrongRedirect,
       params: {
         response_type: "code",
-        client_id: CLIENT_ID_A,
+        client_id: CLIENT_ID,
         redirect_uri: wrongRedirect,
         scope: "openid",
         state: crypto.randomUUID(),
@@ -223,7 +213,7 @@ async function main() {
       loopbackPrefix: redirectUriA,
       params: {
         response_type: "code",
-        client_id: CLIENT_ID_A,
+        client_id: CLIENT_ID,
         redirect_uri: redirectUriA,
         scope: "openid",
         state: state2,
@@ -241,7 +231,7 @@ async function main() {
           grant_type: "authorization_code",
           code: code2,
           redirect_uri: redirectUriA,
-          client_id: CLIENT_ID_A,
+          client_id: CLIENT_ID,
           code_verifier: wrongVerifier,
         }),
       });

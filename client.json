@@ -1,0 +1,9 @@
+{
+  "client_id": "https://sammorrowdrums.github.io/cimd-pages-e2e/client.json",
+  "client_name": "cimd-pages-e2e example client",
+  "redirect_uris": ["http://127.0.0.1:8765/callback"],
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "application_type": "native"
+}

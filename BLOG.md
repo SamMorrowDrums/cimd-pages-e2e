@@ -1,41 +1,42 @@
-# Give your local experiment its own OAuth identity (pilot)
+# Give your loopback OAuth client its own identity in one JSON file
 
-*Draft only — not published externally. Written after an actual, timed
-end-to-end test; see `STEPS.md` for the full evidence and limitations this
-post intentionally doesn't repeat in full.*
+If you've ever built a local CLI tool or desktop app that needs to do an
+OAuth authorization code flow, you've probably run into this: public
+clients using a loopback redirect (`http://127.0.0.1:<port>/callback`)
+usually can't hold a secret, and pre-registering with every authorization
+server you might talk to is friction nobody wants. A common shortcut is to
+copy a `client_id` from someone else's public example project. That works,
+but it means your app is quietly using an identity it doesn't own.
 
-If you've ever hacked together a local CLI or loopback app that needs to
-talk to a real OAuth API, you've probably hit the same wall: registering a
-`client_id` usually means hosting something, and hosting something is more
-setup than a quick experiment deserves — so it's tempting to just reuse
-someone else's public `client_id`. That's not great for them or for you.
+**Client ID Metadata Documents (CIMD)** — currently
+[draft-ietf-oauth-client-id-metadata-document-02](https://www.ietf.org/archive/id/draft-ietf-oauth-client-id-metadata-document-02.txt)
+— offer a neat alternative: your `client_id` *is* an HTTPS URL, and that
+URL resolves directly (no redirects) to a small JSON document describing
+your client (name, redirect URIs, grant types, auth method). An
+authorization server that supports the draft fetches the document at
+authorization time instead of requiring you to pre-register.
 
-[OAuth Client ID Metadata Documents (CIMD)](https://www.ietf.org/archive/id/draft-ietf-oauth-client-id-metadata-document-02.txt)
-fix the underlying problem: your `client_id` can just be a URL to a small
-JSON file describing your app. No pre-registration with the authorization
-server, no dynamic client registration dance — the AS fetches your
-metadata and trusts what it says. You still need to host that one JSON
-file, though.
+The friction this removes only matters if hosting your own document is
+actually easy. So: [`cimd-pages-e2e`](https://github.com/SamMorrowDrums/cimd-pages-e2e)
+is one JSON file, checked into a repo, published with plain GitHub Pages
+(branch deploy, no Actions workflow needed), with a live URL you can curl:
 
-This pilot removes even that step, for the specific case of an
-experimental local/loopback app, using only GitHub Issues, Actions, and
-Pages — nothing else to run or pay for:
+```sh
+curl -is https://sammorrowdrums.github.io/cimd-pages-e2e/client.json
+```
 
-1. Open an issue with your app's name and its `http://127.0.0.1:PORT/...`
-   redirect URI.
-2. A workflow validates it and publishes a CIMD document to this repo's
-   Pages site.
-3. You get a `client_id` URL back as a comment, closing the issue —
-   **11–13 seconds** in our test run.
+To back the claim with something more than a curl check, the repo also
+includes an executable end-to-end test (`flow-test/`) that runs a real,
+maintained authorization server implementation
+([`oidc-provider`](https://www.npmjs.com/package/oidc-provider) v9.12.2,
+which has native CIMD support) locally, and drives a genuine authorization
+code + PKCE (S256) flow, loopback callback, token exchange, and protected
+resource call against the live hosted document — plus three negative
+cases (mismatched `client_id`, unregistered redirect, wrong PKCE
+verifier) to check the rejections actually happen. See `STEPS.md` in the
+repo for the real, timestamped run log.
 
-Use that URL as your client_id, keep your app and its callback on
-loopback, and reuse the same identity for every run of that experiment.
-
-**The honest caveats:** this is a pilot gated to an allow-listed GitHub
-account while the abuse/lifecycle model gets worked out — it is not yet
-open to the general public. You'll also wait an extra, variable stretch
-(tens of seconds to a couple of minutes, in our tests) for GitHub Pages to
-actually serve the new file after the workflow finishes. And a GitHub
-account is a hard prerequisite. None of this prevents someone from lying
-about who they are — it just makes hosting your *own* honest identity as
-easy as copying someone else's.
+This doesn't prove who wrote the code calling itself that client — PKCE
+and CIMD don't do app attestation. What it does is make hosting *your
+own* loopback client identity cheap enough that there's no reason to keep
+borrowing someone else's.
