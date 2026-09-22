@@ -1,0 +1,16 @@
+{
+  "client_id": "https://sammorrowdrums.github.io/cimd-pages-e2e/clients/3-cimd-flow-test-beta.json",
+  "client_name": "cimd-flow-test-beta",
+  "redirect_uris": [
+    "http://127.0.0.1:34918/callback"
+  ],
+  "token_endpoint_auth_method": "none",
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "application_type": "native"
+}
